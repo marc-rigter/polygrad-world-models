@@ -1,7 +1,6 @@
 # Policy-Guided Trajectory Diffusion (PolyGRAD)
 
 <img src="https://github.com/marc-rigter/polygrad-world-models/blob/main/polygrad-world-models.gif" width="50%" height="50%"/>
-![](https://github.com/marc-rigter/polygrad-world-models/blob/main/polygrad-world-models.gif)
 
 Official code to reproduce the experiments for the paper **World Models via Trajectory Diffusion**.  PolyGRAD diffuses an initially random trajectory of states and actions into an on-policy trajectory, and uses the synthetic data for imagined RL training.
 
