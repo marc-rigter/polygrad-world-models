@@ -1,4 +1,4 @@
-# Policy-Guided Trajectory Diffusion (PolyGRAD)
+# World Models via Policy-Guided Trajectory Diffusion (PolyGRAD)
 
 <img src="https://github.com/marc-rigter/polygrad-world-models/blob/main/polygrad-world-models.gif" width="50%" height="50%"/>
 
