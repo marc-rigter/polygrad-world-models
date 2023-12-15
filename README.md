@@ -27,7 +27,7 @@ The scripts/train_world_model.py can be used to reload a dataset and train a wor
 
 ```
 @article{rigter2023world,
-  title={World Models via Trajectory Diffusion},
+  title={World Models via Policy-Guided Trajectory Diffusion},
   author={Rigter, Marc and Yamada, Jun and Posner, Ingmar},
   journal={arXiv preprint arXiv:2312.08533},
   year={2023}
