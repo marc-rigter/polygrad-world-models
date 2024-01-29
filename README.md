@@ -6,19 +6,20 @@ Official code to reproduce the experiments for the paper [World Models via Polic
 
 ## Installation
 1. Install [MuJoCo 2.1.0](https://github.com/deepmind/mujoco/releases) to `~/.mujoco/mujoco210`.
-2. Create a conda environment and install the package.
+2. Install requirements and package.
 ```
 cd polygrad-world-models
-conda env create -f environment.yaml
-conda activate polygrad-wm
+pip install -r requirements.txt
 pip install -e .
 ```
+
+Tested with Python 3.10.
 
 ## Usage
 To run online RL experiments:
 
 ```
-python scripts/online_rl.py --config config.online_rl.hopper
+python3 scripts/online_rl.py --config config.online_rl.hopper
 ```
 
 The scripts/train_world_model.py can be used to reload a dataset and train a world model only.

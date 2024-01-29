@@ -1,0 +1,13 @@
+-f https://download.pytorch.org/whl/torch_stable.html
+numpy
+gym==0.26.2
+mujoco-py==2.1.2.14
+torch==1.13.1+cu117
+typed-argument-parser
+gitpython
+einops
+tqdm
+pandas
+wandb
+cython<3
+dill
