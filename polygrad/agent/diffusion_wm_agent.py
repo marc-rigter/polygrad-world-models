@@ -17,7 +17,7 @@ from polygrad.utils.errors import compute_traj_errors
 from pathlib import Path
 
 
-class PolygradWMAgent(nn.Module):
+class DiffusionWMAgent(nn.Module):
 
     def __init__(self,
                  diffusion_model,
@@ -25,6 +25,7 @@ class PolygradWMAgent(nn.Module):
                  dataset,
                  log_path,
                  env,
+                 diffusion_method,
                  renderer=None,
                  guidance_scale=1.0,
                  log_interval=100,
@@ -60,14 +61,12 @@ class PolygradWMAgent(nn.Module):
             self._guidance_optimizer = torch.optim.SGD([self.log_guidance], lr=guidance_lr)
         self.last_log_step = -1
         self.rollout_steps = rollout_steps
+        self.diffusion_method = diffusion_method
 
         assert self.guidance_type in ['grad', 'sample', 'none']
+        assert self.diffusion_method in ['polygrad', 'autoregressive']
 
-    def imagine(self, conditions, return_sequence=False):
-        self.diffusion_model.eval()
-        metrics = dict()
-
-        start = time.time()
+    def imagine_polygrad(self, conditions):
         trajs, imag_actions, seq, sampling_metrics = self.diffusion_model(
             conditions,
             policy=self.ac.forward_actor,
@@ -79,22 +78,31 @@ class PolygradWMAgent(nn.Module):
             update_states=self.update_states,
             clip_std=self.clip_std,
             states_for_guidance=self.states_for_guidance,
-            return_sequence=return_sequence,
             clip_state_change=self.clip_state_change,
         )
-        metrics[f"imagine_time/step_{self.diffusion_model.horizon}"] = time.time() - start
-        self.diffusion_model.train()
-
+         
         imag_obs = trajs[:, :, :self.dataset.observation_dim]
         imag_rewards = trajs[:, :, -2]
         imag_terminals = trajs[:, :, -1]
         imag_terminals = self.unnormalize(imag_terminals, "terminals")
+        return imag_obs, imag_actions, imag_rewards, imag_terminals, sampling_metrics
+
+    def imagine(self, conditions):
+        self.diffusion_model.eval()
+        metrics = dict()
+        start = time.time()
+        if self.diffusion_method == "polygrad":
+            imag_obs, imag_actions, imag_rewards, imag_terminals, sampling_metrics = self.imagine_polygrad(conditions)
+        else:
+            raise NotImplementedError
+        metrics[f"imagine_time/step_{self.diffusion_model.horizon}"] = time.time() - start
+        self.diffusion_model.train()
     
         term_binary = torch.zeros_like(imag_terminals)
         term_binary[imag_terminals > 0.5] = 1.0
         metrics["terminal_avg"] = term_binary.mean().item()
         [metrics.update({f"sampling/{key}": sampling_metrics[key]}) for key in sampling_metrics.keys()]
-        return imag_obs, imag_actions, imag_rewards, term_binary, metrics, seq
+        return imag_obs, imag_actions, imag_rewards, term_binary, metrics
     
     def unnormalize(self, data, key):
         if key in self.dataset.norm_keys:
@@ -147,7 +155,7 @@ class PolygradWMAgent(nn.Module):
         return metrics
 
     def training_step(self, batch, step, log_only=False, max_log=50):
-        obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(batch.conditions)
+        obs_norm, act_norm, rew_norm, term, metrics = self.imagine(batch.conditions)
         if (step >= self.last_log_step + self.log_interval):
             metrics.update(self.get_metrics(obs_norm.cpu().detach().numpy(),
                                             act_norm.cpu().detach().numpy(),

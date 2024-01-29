@@ -78,7 +78,8 @@ base = {
     'clip_std': 3.0,
 
     ## agent
-    'agent': 'agent.polygrad_wm_agent.PolygradWMAgent',
+    'agent': 'agent.diffusion_wm_agent.DiffusionWMAgent',
+    'diffusion_method': 'polygrad', # Options: ['polygrad', 'autoregressive']
     'n_prefill_steps': 5000,
     'train_agent_ratio': 0.25,
     'agent_batch_size': 1024,

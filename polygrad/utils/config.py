@@ -147,6 +147,7 @@ def create_configs(args, env):
 
     agent_config = Config(
         args.agent,
+        diffusion_method=args.diffusion_method,
         log_path=args.savepath,
         guidance_scale=args.guidance_scale,
         log_interval=args.log_interval,

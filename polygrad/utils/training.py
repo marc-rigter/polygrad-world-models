@@ -148,13 +148,6 @@ class Trainer(object):
                 if current_step is None:
                     current_step = self.step
                 observations, actions, rewards, sim_states, seq = self.generate_samples(self.env)
-                if self.renderer is not None:
-                    savepath = join(self.logdir, f'step-{current_step}-unguided-traj.png')
-                    self.renderer.composite(observations, actions, rewards, savepath=savepath)
-                    for i in list(range(0, len(seq), 10)) + list(range(len(seq)-9, len(seq))):
-                        savepath = join(self.logdir, f'step-{current_step}-unguided-diff-{i}.png')
-                        obs = seq[i]
-                        self.renderer.composite(obs, np.zeros_like(actions), np.zeros_like(rewards), savepath=savepath)
                 error_metrics = compute_traj_errors(self.env, observations, actions, rewards, sim_states)
                 metrics.update(error_metrics)
             self.step += 1
