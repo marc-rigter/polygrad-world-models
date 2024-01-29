@@ -109,7 +109,6 @@ def create_configs(args, env):
         cond_dim=action_dim,
         dim_mults=args.dim_mults,
         attention=args.attention,
-        device=args.device,
         dropout=args.dropout,
         scale_obs=args.scale_obs,
         hidden_dim=args.hidden_dim,
@@ -131,7 +130,6 @@ def create_configs(args, env):
         action_weight=args.action_weight,
         loss_weights=args.loss_weights,
         loss_discount=args.loss_discount,
-        device=args.device,
         noise_sched_tau=args.noise_sched_tau,
         mask_obs=args.mask_obs,
         max_prediction_weight=args.max_prediction_weight,
@@ -171,7 +169,6 @@ def create_configs(args, env):
 
     ac_config = Config(
         ActorCritic,
-        device=args.device,
         in_dim=observation_dim,
         out_actions=action_dim,
         actor_dist=args.actor_dist, 

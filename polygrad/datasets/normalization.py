@@ -10,7 +10,8 @@ import torch
 
 class DatasetNormalizer:
 
-    def __init__(self, dataset, normalizer, device='cuda:0'):
+    def __init__(self, dataset, normalizer):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         dataset = flatten(dataset, dataset["path_lengths"])
 
         self.observation_dim = dataset['observations'].shape[1]

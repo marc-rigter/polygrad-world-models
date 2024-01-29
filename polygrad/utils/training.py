@@ -66,6 +66,7 @@ class Trainer(object):
         self.ema_model = copy.deepcopy(self.model)
         self.update_ema_every = update_ema_every
         self.env = env
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.step_start_ema = step_start_ema
         self.log_freq = log_freq
@@ -225,13 +226,13 @@ class Trainer(object):
         """
         ## get a single datapoint
         batch = self.dataloader_vis.__next__()
-        conditions = to_device(batch.conditions, 'cuda:0')
-        actions = to_device(batch.actions, 'cuda:0')
+        conditions = to_device(batch.conditions)
+        actions = to_device(batch.actions)
 
         if hasattr(env, "init_cond_for_viz"):
             conditions = env.init_cond_for_viz()
             conditions = self.dataset.normalizer.normalize(conditions, 'observations')
-            conditions = {0: to_device(torch.tensor(conditions), "cuda:0")}
+            conditions = {0: to_device(torch.tensor(conditions))}
 
         ## [ n_samples x horizon x (action_dim + observation_dim) ]
         self.ema_model.eval()

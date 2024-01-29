@@ -102,7 +102,7 @@ while step < train_diffusion_steps:
 
     if step % int(1 / args.train_agent_ratio) == 0:
         batch = next(agent_dataloader)
-        agent_metrics = agent.training_step(batch, step, device="cuda:0", log_only=True, max_log=500)
+        agent_metrics = agent.training_step(batch, step, log_only=True, max_log=500)
         [metrics.update({f"agent/{key}": agent_metrics[key]}) for key in agent_metrics.keys()]
 
         diffusion_updates = int(args.train_diffusion_ratio / args.train_agent_ratio)

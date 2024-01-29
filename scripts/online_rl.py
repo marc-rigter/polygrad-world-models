@@ -9,6 +9,8 @@ from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
 from os.path import join
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 #-----------------------------------------------------------------------------#
 #----------------------------------- setup -----------------------------------#
 #-----------------------------------------------------------------------------#
@@ -82,7 +84,7 @@ while step < args.n_environment_steps:
     metrics = dict()
 
     # step the policy in the real environment
-    policy_dist = ac.forward_actor(torch.from_numpy(state).float().to(args.device), normed_input=False)
+    policy_dist = ac.forward_actor(torch.from_numpy(state).float().to(device), normed_input=False)
     act = policy_dist.sample().cpu().detach().numpy()
     next_state, rew, term, trunc, info = expl_env.step(act) 
     done = term or trunc
@@ -115,7 +117,7 @@ while step < args.n_environment_steps:
     if step % int(1 / args.train_agent_ratio) == 0:
         if step >= args.pretrain_diffusion:
             batch = next(agent_dataloader)
-            agent_metrics = agent.training_step(batch, step, device="cuda:0")
+            agent_metrics = agent.training_step(batch, step)
             if step % train_metrics_interval == 0:
                 [metrics.update({f"agent/{key}": agent_metrics[key]}) for key in agent_metrics.keys()]
         
@@ -137,7 +139,7 @@ while step < args.n_environment_steps:
         eval_metrics = evaluate_policy(
             ac.forward_actor,
             eval_env,
-            args.device,
+            device,
             step,
             dataset,
             use_mean=True,

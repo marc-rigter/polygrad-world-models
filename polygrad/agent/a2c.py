@@ -19,7 +19,6 @@ class ActorCritic(nn.Module):
                  in_dim,
                  out_actions,
                  normalizer,
-                 device="cuda:0",
                  hidden_dim=256,
                  min_std=0.01,
                  fixed_std=False,
@@ -56,6 +55,7 @@ class ActorCritic(nn.Module):
                  **kwargs
                  ):
         super().__init__()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.in_dim = in_dim
         self.action_dim = out_actions
         self.gamma = gamma
@@ -86,12 +86,12 @@ class ActorCritic(nn.Module):
         else:
             actor_out_dim = out_actions
 
-        self.actor = MLP(in_dim, actor_out_dim, hidden_dim, hidden_layers, layer_norm).to(device)
-        self.critic = MLP(in_dim, 1, hidden_dim, hidden_layers, layer_norm).to(device)
+        self.actor = MLP(in_dim, actor_out_dim, hidden_dim, hidden_layers, layer_norm).to(self.device)
+        self.critic = MLP(in_dim, 1, hidden_dim, hidden_layers, layer_norm).to(self.device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_target.requires_grad_(False)
         self.ema = EMA(ema)
-        self.device = device
+        
         self.train_steps = 0
 
         if self.learned_std:
@@ -104,7 +104,7 @@ class ActorCritic(nn.Module):
         self.normalize_adv = normalize_adv
         self.tune_entropy = tune_entropy
         self.entropy_target = entropy_target
-        self.log_alpha = torch.log(torch.tensor(entropy_weight)).to(device)
+        self.log_alpha = torch.log(torch.tensor(entropy_weight)).to(self.device)
         if self.tune_entropy:
             self.log_alpha.requires_grad_(True)
             self._optimizer_alpha = torch.optim.AdamW([self.log_alpha], lr=lr_alpha)
@@ -114,7 +114,7 @@ class ActorCritic(nn.Module):
         self.target_update = target_update
         self.max_lr = lr_actor
         if self.lr_schedule == "target":
-            self.log_actor_lr = torch.log(torch.tensor(lr_actor)).to(device)
+            self.log_actor_lr = torch.log(torch.tensor(lr_actor)).to(self.device)
             self.log_actor_lr.requires_grad_(True)
             self._optimizer_actor_lr = torch.optim.AdamW([self.log_actor_lr], lr=tune_actor_lr)
 

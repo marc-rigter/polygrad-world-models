@@ -76,7 +76,6 @@ base = {
     'save_parallel': False,
     'n_reference': 50,
     'bucket': None,
-    'device': 'cuda',
     'n_train_steps': 1e6,
     'pretrain_diffusion': 1000,
     'noise_sched_tau': 1.0,

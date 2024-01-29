@@ -32,7 +32,6 @@ class PolygradWMAgent(nn.Module):
                  guidance_type='grad',
                  guidance_lr=1e-3,
                  action_guidance_noise_scale=1.0,
-                 device="cuda:0",
                  update_states=False,
                  clip_std=None,
                  states_for_guidance='recon',
@@ -48,9 +47,10 @@ class PolygradWMAgent(nn.Module):
         self.renderer = renderer
         self.log_interval = log_interval
         self.guidance_type = guidance_type
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.action_guidance_noise_scale = action_guidance_noise_scale
         assert self.guidance_type in ['grad', 'sample', 'none']
-        self.log_guidance = torch.log(torch.tensor(guidance_scale)).to(device)
+        self.log_guidance = torch.log(torch.tensor(guidance_scale)).to(self.device)
         self.tune_guidance = tune_guidance
         self.update_states = update_states
         self.clip_std = clip_std
@@ -169,12 +169,12 @@ class PolygradWMAgent(nn.Module):
         metrics.update(error_metrics)
         return metrics
 
-    def training_step(self, batch, step, device="cuda:0", log_only=False, max_log=50):
+    def training_step(self, batch, step, log_only=False, max_log=50):
         if (step >= self.last_log_step + self.log_interval):
             if hasattr(self.env, "init_cond_for_viz"):
                 conditions = self.env.init_cond_for_viz()
                 conditions = self.dataset.normalizer.normalize(conditions, 'observations')
-                conditions = {0: torch.tensor(conditions).to("cuda:0")}
+                conditions = {0: torch.tensor(conditions).to(self.device)}
             else:
                 conditions = batch.conditions
             obs_norm, act_norm, rew_norm, term, metrics, diffusion_sequence = self.imagine(conditions, return_sequence=True)
@@ -182,7 +182,7 @@ class PolygradWMAgent(nn.Module):
                                             act_norm.cpu().detach().numpy(),
                                             rew_norm.cpu().detach().numpy(),
                                             batch.sim_states,
-                                            device, 
+                                            self.device, 
                                             step,
                                             max_log=max_log,
                                             diff_seq=diffusion_sequence))

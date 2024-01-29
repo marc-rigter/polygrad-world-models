@@ -13,16 +13,16 @@ class AutoregressiveDiffusionAgent(PolygradWMAgent):
     
     def imagine(self, conditions, return_sequence=False):
         metrics = dict()
-        imag_states = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.observation_dim).to("cuda:0")
-        imag_act = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.action_dim).to("cuda:0")
-        imag_rewards = torch.zeros(conditions[0].shape[0], self.rollout_steps).to("cuda:0")
-        imag_terminals = torch.zeros(conditions[0].shape[0], self.rollout_steps).to("cuda:0")
+        imag_states = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.observation_dim).to(self.device)
+        imag_act = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.action_dim).to(self.device)
+        imag_rewards = torch.zeros(conditions[0].shape[0], self.rollout_steps).to(self.device)
+        imag_terminals = torch.zeros(conditions[0].shape[0], self.rollout_steps).to(self.device)
 
         self.diffusion_model.eval()
         start = time.time()
         for i in range(self.rollout_steps):
             current_state_normed = conditions[0]
-            policy_dist = self.ac.forward_actor(current_state_normed.to("cuda:0"), normed_input=True)
+            policy_dist = self.ac.forward_actor(current_state_normed.to(self.device), normed_input=True)
             actions = policy_dist.sample().unsqueeze(1)
             actions = self.normalize(actions, "actions")
             actions = torch.cat([actions, torch.zeros_like(actions)], dim=1) # add dummy action
