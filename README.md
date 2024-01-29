@@ -25,7 +25,7 @@ python3 scripts/online_rl.py --config config.online_rl.hopper
 ```
 
 ### Training World Model from Fixed Datasets
-Download the datasets from [Google Drive](https://drive.google.com/drive/folders/1uyL434A4OXbqOI0wgL6uDZ9jGqSOBpfz?usp=sharing) and store them in polygrad-world-models/datasets. Train and evaluate errors for PolyGRAD world models using:
+Download the datasets from [Google Drive](https://drive.google.com/drive/folders/1uyL434A4OXbqOI0wgL6uDZ9jGqSOBpfz?usp=sharing) or the [Hugging Face Hub](https://huggingface.co/datasets/marcrigter/polygrad-wm-datasets) and store them in polygrad-world-models/datasets. Train and evaluate errors for PolyGRAD world models using:
 
 ```
 python3 scripts/train_diffusion_wm.py --config config.world_model_only.polygrad_mlp.hopper_h10
