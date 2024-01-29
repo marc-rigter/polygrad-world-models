@@ -147,9 +147,8 @@ class PolygradWMAgent(nn.Module):
         return metrics
 
     def training_step(self, batch, step, log_only=False, max_log=50):
+        obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(batch.conditions)
         if (step >= self.last_log_step + self.log_interval):
-            conditions = batch.conditions
-            obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(conditions, return_sequence=True)
             metrics.update(self.get_metrics(obs_norm.cpu().detach().numpy(),
                                             act_norm.cpu().detach().numpy(),
                                             rew_norm.cpu().detach().numpy(),
@@ -158,8 +157,6 @@ class PolygradWMAgent(nn.Module):
                                             step,
                                             max_log=max_log))
             self.last_log_step = step
-        else:
-            obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(batch.conditions)
 
         ac_metrics = self.ac.training_step(
                         states=obs_norm,
