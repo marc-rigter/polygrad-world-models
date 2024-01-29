@@ -3,7 +3,7 @@ from ..base_config import base, args_to_watch, logbase
 run_config = {
 'suite':'gym',
 'env_name':'Walker2d-v3',
-'load_path': 'datasets/final_datasets_nov12/final-rl-runs-lowtrainratio_seed1_Walker2d',
+'load_path': 'datasets/Walker2d',
 'load_step': 1000000,
 'model': 'models.TransformerDenoiser',
 'learning_rate': 1e-4,

@@ -4,7 +4,7 @@ run_config = {
 'suite':'gym',
 'env_name':'Hopper-v3',
 'train_agent_ratio': 0.01,
-'load_path': 'datasets/final_datasets_nov12/final-rl-runs-lowtrainratio_seed1_Hopper',
+'load_path': 'datasets/Hopper',
 'load_step': 1000000,
 'horizon': 10,
 'hidden_dim': 1024,
