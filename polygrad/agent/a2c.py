@@ -71,7 +71,6 @@ class ActorCritic(nn.Module):
         self.ema = EMA(ema)
         
         self.train_steps = 0
-
         if self.learned_std:
             self.logstd = AddBias((torch.ones(actor_out_dim)*np.log(self.init_std-self.min_std)).to(self.device))
             self._optimizer_actor = torch.optim.AdamW(list(self.actor.parameters()) + list(self.logstd.parameters()), lr=lr_actor)
@@ -252,6 +251,7 @@ class ActorCritic(nn.Module):
                 "minimum_logprob": action_logprob.min().item(),
             })
 
+        # gradient update
         if not log_only:
             self._optimizer_actor.zero_grad()
             self._optimizer_critic.zero_grad()
@@ -275,7 +275,7 @@ class ActorCritic(nn.Module):
             metrics["update_kl"] = approx_kl
             metrics["update_delta_logprob_initial"] = initial_update_size
             
-            # linesearch
+            # linesearch - modify step size to find desired update size
             if self.linesearch:
                 update_size = initial_update_size
                 linesearch_steps = 1
@@ -299,6 +299,7 @@ class ActorCritic(nn.Module):
                 metrics["update_linesearch_steps"] = linesearch_steps
                 self._optimizer_actor.param_groups[0]['lr'] = old_lr 
 
+            # update actor learning rate according to initial step size
             if self.update_actor_lr:
                 self.update_lr(initial_update_size)
             metrics["lr_actor"] = self._optimizer_actor.param_groups[0]['lr']
