@@ -7,9 +7,10 @@ import dill as pickle
 import numpy as np
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
-from polygrad.utils.serialization import reload_dataset
+from polygrad.utils.datasets import reload_dataset
 from os.path import join
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def update_dataset_indices(dataset, horizon):
     dataset.horizon = horizon
@@ -56,10 +57,12 @@ agent = configs["agent_config"](
 
 # load dataset and a2c from checkpoint
 assert args.load_path is not None
-agent.load(args.load_path, args.load_step, load_a2c=True, load_dataset=False, load_diffusion=False)
-reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.pkl"), dataset)
+ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
+ac.load_state_dict(torch.load(ac_path, map_location=device))
+reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.npy"), dataset)
+
+# initialise wandb
 utils.report_parameters(model)
-group = "online_rl"
 wandb.init(entity="a2i", project=args.project, group=args.group, config=args)
 
 #-----------------------------------------------------------------------------#

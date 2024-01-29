@@ -77,26 +77,3 @@ def check_compatibility(experiment_1, experiment_2):
     assert n_steps_1 == n_steps_2, \
         ('Number of timesteps should match between diffusion experiments, '
         f'found {n_steps_1} and {n_steps_2}')
-    
-def reload_dataset(reload_dataset_path, new_dataset):
-    with open(reload_dataset_path, 'rb') as f:
-        reload_dataset = pickle.load(f)
-        data_buffer = reload_dataset.data_buffer
-
-    # put the loaded data into the dataset object
-    new_dataset.reset_data_buffer()
-    for i in range(data_buffer.n_episodes):
-        path_length = data_buffer._dict['path_lengths'][i]
-        episode = {
-            "observations": data_buffer._dict['observations'][i][:path_length],
-            "actions": data_buffer._dict['actions'][i][:path_length],
-            "next_observations": data_buffer._dict['next_observations'][i][:path_length],
-            "rewards": data_buffer._dict['rewards'][i][:path_length],
-            "terminals": data_buffer._dict['terminals'][i][:path_length],
-            "sim_states": data_buffer._dict['sim_states'][i][:path_length],
-        }
-        episode["timeouts"] = np.array([False] * len(episode["rewards"]))
-        new_dataset.add_episode(episode)
-    new_dataset.update_normalizers()
-    print(f"Loaded dataset containing {dataset.data_buffer.n_episodes} episodes.")
-    return new_dataset

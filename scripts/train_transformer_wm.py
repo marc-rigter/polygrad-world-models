@@ -7,11 +7,12 @@ import dill as pickle
 import numpy as np
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
-from polygrad.utils.serialization import reload_dataset
+from polygrad.utils.datasets import reload_dataset
 from polygrad.agent.transformer_wm import TransformerWM
 from os.path import join
 from polygrad.utils.errors import compute_traj_errors
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def update_dataset_indices(dataset, horizon):
     dataset.horizon = horizon
@@ -47,12 +48,11 @@ world_model = TransformerWM(
     rollout_length = args.rollout_steps
 )
 
-ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
-ac.load_state_dict(torch.load(ac_path))
-
-# load dataset from checkpoint.
+# load dataset and a2c from checkpoint
 assert args.load_path is not None
-reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.pkl"), dataset)
+ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
+ac.load_state_dict(torch.load(ac_path), map_location=device)
+reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.npy"), dataset)
 wandb.init(entity="a2i",  project=args.project, group=args.group, config=args)
 
 #-----------------------------------------------------------------------------#

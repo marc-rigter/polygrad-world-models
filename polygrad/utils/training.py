@@ -172,7 +172,7 @@ class Trainer(object):
             loads model and ema from disk
         '''
         loadpath = os.path.join(self.logdir, f'state_{epoch}.pt')
-        data = torch.load(loadpath)
+        data = torch.load(loadpath, map_location=self.device)
 
         self.step = data['step']
         self.model.load_state_dict(data['model'])

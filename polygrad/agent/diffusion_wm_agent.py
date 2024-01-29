@@ -228,12 +228,6 @@ class DiffusionWMAgent(nn.Module):
         diffusion_path = join(path, f"step-{step}-diffusion.pt")
         torch.save(self.ac.state_dict(), ac_path)
         torch.save(self.diffusion_model.state_dict(), diffusion_path)
-
-        dataset_path = join(path, f"step-{step}-dataset.pkl")
-        if os.path.exists(dataset_path):
-            os.remove(dataset_path)
-        with open(dataset_path, 'wb') as f:
-            pickle.dump(self.dataset, f)
         return
     
     def load(self, path, step, load_a2c=True, load_diffusion=True, load_dataset=True):
@@ -241,15 +235,10 @@ class DiffusionWMAgent(nn.Module):
 
         if load_a2c:
             ac_path = join(path, f"step-{step}-ac.pt")
-            self.ac.load_state_dict(torch.load(ac_path))
+            self.ac.load_state_dict(torch.load(ac_path, map_location=self.device))
 
         if load_diffusion:
             diffusion_path = join(path, f"step-{step}-diffusion.pt")
-            self.diffusion_model.load_state_dict(torch.load(diffusion_path))
-
-        if load_dataset:
-            dataset_path = join(path, f"step-{step}-dataset.pkl")
-            with open(dataset_path, 'rb') as f:
-                self.dataset = pickle.load(f)
+            self.diffusion_model.load_state_dict(torch.load(diffusion_path, map_location=self.device))
         return
        

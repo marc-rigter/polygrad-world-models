@@ -62,6 +62,11 @@ class ReplayBuffer:
         self._dict[key] = np.zeros(shape, dtype=np.float32)
         # print(f'[ utils/mujoco ] Allocated {key} with size {shape}')
 
+    def save_data_dict(self, path):
+        data = {key: value[:self._count] for key, value in self._dict.items()}
+        np.save(path, data)    
+        return 
+
     def add_path(self, path):
         path_length = len(path['observations'])
         assert path_length <= self.max_path_length
