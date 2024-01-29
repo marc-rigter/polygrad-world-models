@@ -7,8 +7,8 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-class TransformerWM:
 
+class TransformerWM:
     def __init__(self, model, context_length, rollout_length):
         self.model = model
         self.loss_fn = nn.MSELoss()
@@ -34,12 +34,17 @@ class TransformerWM:
         loss.backward()
         self.optimizer.step()
         return metrics
-    
+
     def imagine(self, batch, policy):
-        imag_states = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.trajectories.shape[2] - 2).to(self.device)
-        imag_act = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.actions.shape[2]).to(self.device)
-        imag_rewards = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to(self.device)
-        imag_terminals = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to(self.device)
+        batch_size = batch.trajectories.shape[0]
+        imag_states = torch.zeros(
+            batch_size, self.rollout_length,batch.trajectories.shape[2] - 2,
+        ).to(self.device)
+        imag_act = torch.zeros(
+            batch_size, self.rollout_length, batch.actions.shape[2]
+        ).to(self.device)
+        imag_rewards = torch.zeros(batch_size, self.rollout_length).to(self.device)
+        imag_terminals = torch.zeros(batch_size, self.rollout_length).to(self.device)
 
         obs_context = batch.trajectories[:, 0:1].to(self.device)
         metrics = dict()
@@ -51,7 +56,7 @@ class TransformerWM:
                 act_context = current_act.unsqueeze(1)
             else:
                 act_context = torch.cat([act_context, current_act.unsqueeze(1)], dim=1)
-                act_context = act_context[:, -self.context_length:]
+                act_context = act_context[:, -self.context_length :]
             rew = obs_context[:, -1, -2]
             term = obs_context[:, -1, -1]
             imag_states[:, i, :] = current_obs
@@ -61,6 +66,6 @@ class TransformerWM:
 
             predictions = self.model(obs_context, act_context).detach()
             obs_context = torch.cat([obs_context, predictions[:, -1:]], dim=1)
-            obs_context = obs_context[:, -self.context_length:]
+            obs_context = obs_context[:, -self.context_length :]
             metrics[f"imagine_time/step_{i+1}"] = time.time() - start
         return imag_states, imag_act, imag_rewards, imag_terminals, metrics

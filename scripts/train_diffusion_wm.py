@@ -12,17 +12,21 @@ from os.path import join
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 def update_dataset_indices(dataset, horizon):
     dataset.horizon = horizon
     for i in range(dataset.data_buffer.n_episodes):
         dataset.update_indices(i)
 
-#-----------------------------------------------------------------------------#
-#----------------------------------- setup -----------------------------------#
-#-----------------------------------------------------------------------------#
+
+# -----------------------------------------------------------------------------#
+# ----------------------------------- setup -----------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 class Parser(utils.Parser):
-    config: str = 'config.simple_maze'
+    config: str = "config.simple_maze"
+
 
 args = Parser().parse_args()
 
@@ -52,7 +56,7 @@ agent = configs["agent_config"](
     actor_critic=ac,
     dataset=dataset,
     env=eval_env,
-    renderer=renderer
+    renderer=renderer,
 )
 
 # load dataset and a2c from checkpoint
@@ -65,15 +69,21 @@ reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.npy"), datas
 utils.report_parameters(model)
 wandb.init(entity="a2i", project=args.project, group=args.group, config=args)
 
-#-----------------------------------------------------------------------------#
-#--------------------------- prepare to train --------------------------------#
-#-----------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------#
+# --------------------------- prepare to train --------------------------------#
+# -----------------------------------------------------------------------------#
 
-agent_dataloader = utils.training.cycle(torch.utils.data.DataLoader(
-    dataset, batch_size=args.agent_batch_size, num_workers=2, shuffle=True, pin_memory=True
-))
+agent_dataloader = utils.training.cycle(
+    torch.utils.data.DataLoader(
+        dataset,
+        batch_size=args.agent_batch_size,
+        num_workers=2,
+        shuffle=True,
+        pin_memory=True,
+    )
+)
 
-#---------------------------- Main Loop ----------------------------------#
+# ---------------------------- Main Loop ----------------------------------#
 
 step = 0
 timer = Timer()
@@ -83,11 +93,17 @@ while step < train_diffusion_steps:
     if step % int(1 / args.train_agent_ratio) == 0:
         batch = next(agent_dataloader)
         agent_metrics = agent.training_step(batch, step, log_only=True, max_log=500)
-        [metrics.update({f"agent/{key}": agent_metrics[key]}) for key in agent_metrics.keys()]
+        [
+            metrics.update({f"agent/{key}": agent_metrics[key]})
+            for key in agent_metrics.keys()
+        ]
 
         diffusion_updates = int(args.train_diffusion_ratio / args.train_agent_ratio)
         diffusion_metrics = diffusion_trainer.train(diffusion_updates, step)
-        [metrics.update({f"diffusion/{key}": diffusion_metrics[key]}) for key in diffusion_metrics.keys()]
+        [
+            metrics.update({f"diffusion/{key}": diffusion_metrics[key]})
+            for key in diffusion_metrics.keys()
+        ]
 
     wandb.log(metrics, step=step)
     step += 1

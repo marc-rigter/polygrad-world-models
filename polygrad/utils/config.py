@@ -7,28 +7,31 @@ import torch
 import numpy as np
 from polygrad.agent.a2c import ActorCritic
 
+
 def import_class(_class):
-    if type(_class) is not str: return _class
+    if type(_class) is not str:
+        return _class
     ## 'diffusion' on standard installs
-    repo_name = __name__.split('.')[0]
+    repo_name = __name__.split(".")[0]
     ## eg, 'utils'
-    module_name = '.'.join(_class.split('.')[:-1])
+    module_name = ".".join(_class.split(".")[:-1])
     ## eg, 'Renderer'
-    class_name = _class.split('.')[-1]
+    class_name = _class.split(".")[-1]
     ## eg, 'diffusion.utils'
-    module = importlib.import_module(f'{repo_name}.{module_name}')
+    module = importlib.import_module(f"{repo_name}.{module_name}")
     ## eg, diffusion.utils.Renderer
     _class = getattr(module, class_name)
-    print(f'[ utils/config ] Imported {repo_name}.{module_name}:{class_name}')
+    print(f"[ utils/config ] Imported {repo_name}.{module_name}:{class_name}")
     return _class
+
 
 def set_all_seeds(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
 
-class Config(Mapping):
 
+class Config(Mapping):
     def __init__(self, _class, verbose=True, savepath=None, device=None, **kwargs):
         self._class = import_class(_class)
         self._device = device
@@ -42,14 +45,14 @@ class Config(Mapping):
 
         if savepath is not None:
             savepath = os.path.join(*savepath) if type(savepath) is tuple else savepath
-            pickle.dump(self, open(savepath, 'wb'))
-            print(f'[ utils/config ] Saved config to: {savepath}\n')
+            pickle.dump(self, open(savepath, "wb"))
+            print(f"[ utils/config ] Saved config to: {savepath}\n")
 
     def __repr__(self):
-        string = f'\n[utils/config ] Config: {self._class}\n'
+        string = f"\n[utils/config ] Config: {self._class}\n"
         for key in sorted(self._dict.keys()):
             val = self._dict[key]
-            string += f'    {key}: {val}\n'
+            string += f"    {key}: {val}\n"
         return string
 
     def __iter__(self):
@@ -62,7 +65,7 @@ class Config(Mapping):
         return len(self._dict)
 
     def __getattr__(self, attr):
-        if attr == '_dict' and '_dict' not in vars(self):
+        if attr == "_dict" and "_dict" not in vars(self):
             self._dict = {}
             return self._dict
         try:
@@ -80,7 +83,7 @@ class Config(Mapping):
 def create_configs(args, env):
     dataset_config = Config(
         args.loader,
-        savepath=(args.savepath, 'dataset_config.pkl'),
+        savepath=(args.savepath, "dataset_config.pkl"),
         horizon=args.horizon,
         normalizer=args.normalizer,
         preprocess_fns=args.preprocess_fns,
@@ -92,18 +95,18 @@ def create_configs(args, env):
     if args.renderer is not None:
         render_config = Config(
             args.renderer,
-            savepath=(args.savepath, 'render_config.pkl'),
+            savepath=(args.savepath, "render_config.pkl"),
             env_name=args.env_name,
         )
     else:
         render_config = None
-        
+
     observation_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
 
     model_config = Config(
         args.model,
-        savepath=(args.savepath, 'model_config.pkl'),
+        savepath=(args.savepath, "model_config.pkl"),
         horizon=args.horizon,
         transition_dim=observation_dim + 2,
         cond_dim=action_dim,
@@ -118,7 +121,7 @@ def create_configs(args, env):
 
     diffusion_config = Config(
         args.diffusion,
-        savepath=(args.savepath, 'diffusion_config.pkl'),
+        savepath=(args.savepath, "diffusion_config.pkl"),
         horizon=args.horizon,
         observation_dim=observation_dim,
         action_dim=action_dim,
@@ -132,7 +135,7 @@ def create_configs(args, env):
 
     trainer_config = Config(
         utils.Trainer,
-        savepath=(args.savepath, 'trainer_config.pkl'),
+        savepath=(args.savepath, "trainer_config.pkl"),
         train_batch_size=args.batch_size,
         train_lr=args.learning_rate,
         ema_decay=args.ema_decay,
@@ -166,7 +169,7 @@ def create_configs(args, env):
         ActorCritic,
         in_dim=observation_dim,
         out_actions=action_dim,
-        actor_dist=args.actor_dist, 
+        actor_dist=args.actor_dist,
         min_std=args.min_std,
         lambda_gae=args.lambda_gae,
         entropy_weight=args.entropy_weight,
@@ -188,14 +191,13 @@ def create_configs(args, env):
     )
 
     configs = {
-        'dataset_config': dataset_config,
-        'render_config': render_config,
-        'model_config': model_config,
-        'diffusion_config': diffusion_config,
-        'trainer_config': trainer_config,
-        'agent_config': agent_config,
-        'ac_config': ac_config,
-
+        "dataset_config": dataset_config,
+        "render_config": render_config,
+        "model_config": model_config,
+        "diffusion_config": diffusion_config,
+        "trainer_config": trainer_config,
+        "agent_config": agent_config,
+        "ac_config": ac_config,
     }
 
     return configs

@@ -14,17 +14,21 @@ from polygrad.utils.errors import compute_traj_errors
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 def update_dataset_indices(dataset, horizon):
     dataset.horizon = horizon
     for i in range(dataset.data_buffer.n_episodes):
         dataset.update_indices(i)
 
-#-----------------------------------------------------------------------------#
-#----------------------------------- setup -----------------------------------#
-#-----------------------------------------------------------------------------#
+
+# -----------------------------------------------------------------------------#
+# ----------------------------------- setup -----------------------------------#
+# -----------------------------------------------------------------------------#
+
 
 class Parser(utils.Parser):
-    config: str = 'config.simple_maze'
+    config: str = "config.simple_maze"
+
 
 args = Parser().parse_args()
 
@@ -43,9 +47,7 @@ model.to(device)
 dataset = configs["dataset_config"](random_episodes)
 ac = configs["ac_config"](normalizer=dataset.normalizer)
 world_model = TransformerWM(
-    model,
-    context_length = args.horizon - 1,
-    rollout_length = args.rollout_steps
+    model, context_length=args.horizon - 1, rollout_length=args.rollout_steps
 )
 
 # load dataset and a2c from checkpoint
@@ -53,17 +55,23 @@ assert args.load_path is not None
 ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
 ac.load_state_dict(torch.load(ac_path, map_location=device))
 reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.npy"), dataset)
-wandb.init(entity="a2i",  project=args.project, group=args.group, config=args)
+wandb.init(entity="a2i", project=args.project, group=args.group, config=args)
 
-#-----------------------------------------------------------------------------#
-#--------------------------- prepare to train --------------------------------#
-#-----------------------------------------------------------------------------#
+# -----------------------------------------------------------------------------#
+# --------------------------- prepare to train --------------------------------#
+# -----------------------------------------------------------------------------#
 
-dataloader = utils.training.cycle(torch.utils.data.DataLoader(
-    dataset, batch_size=args.agent_batch_size, num_workers=2, shuffle=True, pin_memory=True
-))
+dataloader = utils.training.cycle(
+    torch.utils.data.DataLoader(
+        dataset,
+        batch_size=args.agent_batch_size,
+        num_workers=2,
+        shuffle=True,
+        pin_memory=True,
+    )
+)
 
-#---------------------------- Main Loop ----------------------------------#
+# ---------------------------- Main Loop ----------------------------------#
 
 step = 0
 timer = Timer()
@@ -75,17 +83,27 @@ while step < train_diffusion_steps:
     metrics.update(world_model.train(batch))
 
     if step % 2000 == 0:
-        imag_states, imag_act, imag_rewards, imag_terminals, imag_metrics = world_model.imagine(batch, ac.forward_actor)
-        
-        obs = dataset.normalizer.unnormalize(imag_states.detach().cpu().numpy(), "observations")
+        (
+            imag_states,
+            imag_act,
+            imag_rewards,
+            imag_terminals,
+            imag_metrics,
+        ) = world_model.imagine(batch, ac.forward_actor)
+
+        obs = dataset.normalizer.unnormalize(
+            imag_states.detach().cpu().numpy(), "observations"
+        )
         act = dataset.normalizer.unnormalize(imag_act.detach().cpu().numpy(), "actions")
-        rew = dataset.normalizer.unnormalize(imag_rewards.detach().cpu().numpy(), "rewards")
+        rew = dataset.normalizer.unnormalize(
+            imag_rewards.detach().cpu().numpy(), "rewards"
+        )
         error_metrics = compute_traj_errors(
             eval_env,
             obs[:max_log],
-            act[:max_log], 
+            act[:max_log],
             rew[:max_log],
-            sim_states=batch.sim_states[:max_log]
+            sim_states=batch.sim_states[:max_log],
         )
         metrics.update(imag_metrics)
         metrics.update(error_metrics)

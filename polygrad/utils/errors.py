@@ -1,9 +1,10 @@
 import numpy as np
 
+
 def compute_traj_errors(env, observations, actions, rewards, sim_states):
     """
-        Observations and actions are [n_traj X traj_len X dim]
-        Rewards is [n_traj X traj_len]
+    Observations and actions are [n_traj X traj_len X dim]
+    Rewards is [n_traj X traj_len]
     """
 
     # loop through the observations and actions
@@ -11,18 +12,21 @@ def compute_traj_errors(env, observations, actions, rewards, sim_states):
         return None, None
 
     max_steps = observations.shape[1] - 1
-    error_lists  = dict()
+    error_lists = dict()
     rew_errors = []
 
     # loop over each imagined trajectory
-    for ep_obs, ep_act, ep_rew, ep_sim_state in zip(observations, actions, rewards, sim_states):
-
+    for ep_obs, ep_act, ep_rew, ep_sim_state in zip(
+        observations, actions, rewards, sim_states
+    ):
         # compute prediction error from initial state
         init_s = ep_obs[0, :]
         init_sim_state = ep_sim_state[0, :]
 
         # set initial simulator state
-        init_s = np.clip(init_s, a_min=env.observation_space.low, a_max=env.observation_space.high)
+        init_s = np.clip(
+            init_s, a_min=env.observation_space.low, a_max=env.observation_space.high
+        )
         env.reset()
         env.set_state(init_s, init_sim_state)
 
@@ -49,14 +53,22 @@ def compute_traj_errors(env, observations, actions, rewards, sim_states):
 
     metrics = dict()
     for step in error_lists:
-        metrics.update({
-            f"errors/dynamics_mse_{step:04}_step": np.array(error_lists[step]).mean(),
-            f"errors/dynamics_mse_std_{step:04}_step": np.array(error_lists[step]).std(),
-        })
+        metrics.update(
+            {
+                f"errors/dynamics_mse_{step:04}_step": np.array(
+                    error_lists[step]
+                ).mean(),
+                f"errors/dynamics_mse_std_{step:04}_step": np.array(
+                    error_lists[step]
+                ).std(),
+            }
+        )
 
-    metrics.update({
+    metrics.update(
+        {
             "errors/reward_mse": np.array(rew_errors).mean(),
             "errors/reward_mse_std": np.array(rew_errors).std(),
-    })
+        }
+    )
 
     return metrics

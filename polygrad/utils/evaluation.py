@@ -9,7 +9,9 @@ def get_standardized_stats(policy_distr, act):
     # Compute logprob with all action distributions normalized to standard normal.
     policy_mean = policy_distr.mean
     policy_std = policy_distr.stddev
-    standard_normal = D.independent.Independent(D.normal.Normal(torch.zeros_like(policy_mean), torch.ones_like(policy_mean)), 1)
+    standard_normal = D.independent.Independent(
+        D.normal.Normal(torch.zeros_like(policy_mean), torch.ones_like(policy_mean)), 1
+    )
     normed_act = (act - policy_mean) / policy_std
     standard_logprob = standard_normal.log_prob(normed_act)
 
@@ -17,9 +19,19 @@ def get_standardized_stats(policy_distr, act):
     act_means = torch.mean(normed_act, dim=[0, 1])
     return standard_logprob, act_stds, act_means
 
-def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=False, renderer=None, savepath=None):
-    """
-    """
+
+def evaluate_policy(
+    policy,
+    env,
+    device,
+    step,
+    dataset,
+    n_episodes=10,
+    use_mean=False,
+    renderer=None,
+    savepath=None,
+):
+    """ """
     ep_lens = []
     rewards = []
     returns = []
@@ -36,13 +48,15 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
         ep_actions = []
 
         while not done:
-            policy_dist = policy(torch.from_numpy(state).float().to(device), normed_input=False)
+            policy_dist = policy(
+                torch.from_numpy(state).float().to(device), normed_input=False
+            )
             if use_mean:
                 act = policy_dist.mean
             else:
                 act = policy_dist.sample()
             act = act.cpu().detach().numpy()
-            next_state, rew, term, trunc, info = env.step(act) 
+            next_state, rew, term, trunc, info = env.step(act)
             done = term or trunc
 
             ep_states.append(state.copy())
@@ -50,7 +64,7 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
             ep_rewards.append(rew.copy())
             t += 1
             state = next_state
-        
+
         returns.append(sum(ep_rewards))
         rewards.append(np.array(ep_rewards))
         states.append(np.array(ep_states))
@@ -73,9 +87,9 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
     metrics["max_ep_len"] = max_ep_len
 
     if savepath is not None:
-        savepath = join(savepath, f'step-{step}-real-policy-traj.png')
+        savepath = join(savepath, f"step-{step}-real-policy-traj.png")
 
     if renderer is not None:
         fig = renderer.composite(states, actions, rewards, savepath)
-        metrics.update({f'real-policy-traj': wandb.Image(fig)})
+        metrics.update({f"real-policy-traj": wandb.Image(fig)})
     return metrics
