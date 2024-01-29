@@ -21,7 +21,6 @@ class ActorCritic(nn.Module):
                  normalizer,
                  hidden_dim=256,
                  min_std=0.01,
-                 fixed_std=False,
                  init_std=0.5,
                  hidden_layers=2,
                  layer_norm=True,
@@ -34,7 +33,7 @@ class ActorCritic(nn.Module):
                  actor_dist='normal_tanh',
                  normalize_adv=False,
                  grad_clip=None,
-                 learned_std=False,
+                 learned_std=True,
                  ac_use_normed_inputs=True,
                  target_update=0.02,
                  actorlr_lr=3e-4,
@@ -55,9 +54,7 @@ class ActorCritic(nn.Module):
         self.min_std = min_std
         self.normalizer = normalizer
         self.learned_std = learned_std
-        self.fixed_std = fixed_std
         self.init_std = init_std
-        self.current_std = init_std
         self.use_normed_inputs = ac_use_normed_inputs
         self.log_interval = log_interval
         self.last_log = -float('inf')
@@ -66,11 +63,7 @@ class ActorCritic(nn.Module):
         self.linesearch_tolerance = linesearch_tolerance
         self.linesearch_ratio = linesearch_ratio
 
-        if not self.fixed_std and not self.learned_std:
-            actor_out_dim = 2 * out_actions
-        else:
-            actor_out_dim = out_actions
-
+        actor_out_dim = out_actions
         self.actor = MLP(in_dim, actor_out_dim, hidden_dim, hidden_layers, layer_norm).to(self.device)
         self.critic = MLP(in_dim, 1, hidden_dim, hidden_layers, layer_norm).to(self.device)
         self.critic_target = copy.deepcopy(self.critic)
@@ -110,20 +103,14 @@ class ActorCritic(nn.Module):
         y = self.actor.forward(features).float()
 
         if self.actor_dist == 'normal_tanh':
-            if not self.fixed_std and not self.learned_std:
-                return normal_tanh(y, min_std=self.min_std)
-            else:
-                if len(y.shape) == 0 or y.shape[-1] != self.action_dim:
-                    # TODO: Fix this.
-                    y = y.unsqueeze(-1)
+            if len(y.shape) == 0 or y.shape[-1] != self.action_dim:
+                y = y.unsqueeze(-1)
 
-                if self.fixed_std:
-                    std = self.current_std
-                elif self.learned_std:
-                    std = self.logstd(torch.zeros_like(y)).exp() + self.min_std
-                else:
-                    raise NotImplementedError
-                return normal_tanh(y, fixed_std=std)
+            if self.learned_std:
+                std = self.logstd(torch.zeros_like(y)).exp() + self.min_std
+            else:
+                std = self.init_std
+            return normal_tanh(y, fixed_std=std)
         else:
             raise NotImplementedError
 
@@ -231,7 +218,7 @@ class ActorCritic(nn.Module):
         standard_logprob_std = standard_logprob.std()
 
         policy_entropy = policy_distr.entropy()
-        if not self.fixed_std:
+        if self.learned_std:
             loss_actor = loss_policy - torch.exp(self.log_alpha) * policy_entropy
         else:
             loss_actor = loss_policy
@@ -315,9 +302,5 @@ class ActorCritic(nn.Module):
             if self.update_actor_lr:
                 self.update_lr(initial_update_size)
             metrics["lr_actor"] = self._optimizer_actor.param_groups[0]['lr']
-
-            # if fixed std dev decay the std dev
-            if self.fixed_std:
-                self.update_std(env_step)
         return metrics
 

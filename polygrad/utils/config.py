@@ -180,7 +180,6 @@ def create_configs(args, env):
         grad_clip=args.ac_grad_clip,
         gamma=args.gamma,
         normalize_adv=args.normalize_adv,
-        fixed_std=args.fixed_std,
         learned_std=args.learned_std,
         init_std=args.init_std,
         ema=args.ema,

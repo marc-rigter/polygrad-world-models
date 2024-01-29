@@ -98,7 +98,6 @@ base = {
     'lr_critic': 3e-4,
     'ac_grad_clip': 0.1,
     'normalize_adv': True,
-    'fixed_std': False,
     'learned_std': True,
     'init_std': 1.0,
     'gamma': 0.99,
