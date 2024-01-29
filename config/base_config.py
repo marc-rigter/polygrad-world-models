@@ -94,7 +94,6 @@ base = {
     'guidance_type': 'grad', # Options: ['grad', 'sample', 'none']
     'guidance_lr': 3e-3,
     'entropy_weight': 1e-5,
-    'entropy_target': -1.0,
     'lr_actor': 3e-5,
     'lr_critic': 3e-4,
     'ac_grad_clip': 0.1,
@@ -102,7 +101,6 @@ base = {
     'tune_entropy': False,
     'fixed_std': False,
     'learned_std': True,
-    'decay_std_steps': 500000,
     'init_std': 1.0,
     'gamma': 0.99,
     'actor_dist': 'normal_tanh',
@@ -113,8 +111,7 @@ base = {
     'log_video': False,
     'ac_use_normed_inputs': False,
     'target_update': 0.01,
-    'lr_schedule': 'target', # Options: ['linear', 'constant', 'target']
-    'lr_decay_steps': 1500000,
+    'update_actor_lr': True,
     'tune_actor_lr': 3e-4,
     'update_states': False,
     'states_for_guidance': 'recon', # ['recon', 'posterior_mean']

@@ -22,7 +22,6 @@ class ActorCritic(nn.Module):
                  hidden_dim=256,
                  min_std=0.01,
                  fixed_std=False,
-                 decay_std_steps=500000,
                  init_std=0.5,
                  hidden_layers=2,
                  layer_norm=True,
@@ -30,7 +29,6 @@ class ActorCritic(nn.Module):
                  ema=0.995,
                  lambda_gae=0.8,
                  entropy_weight=1e-3,
-                 entropy_target=-1,
                  tune_entropy=True,
                  target_interval=100,
                  lr_actor=1e-4,
@@ -46,8 +44,7 @@ class ActorCritic(nn.Module):
                  ac_use_normed_inputs=True,
                  target_update=0.02,
                  tune_actor_lr=3e-4,
-                 lr_schedule='constant',
-                 lr_decay_steps=1000000,
+                 update_actor_lr=True,
                  log_interval=20000,
                  linesearch=False,
                  linesearch_tolerance=0.25,
@@ -69,11 +66,9 @@ class ActorCritic(nn.Module):
         self.min_logprob = min_logprob * self.action_dim
         self.learned_std = learned_std
         self.fixed_std = fixed_std
-        self.decay_std_steps = decay_std_steps
         self.init_std = init_std
         self.current_std = init_std
         self.use_normed_inputs = ac_use_normed_inputs
-        self.lr_decay_steps = lr_decay_steps
         self.log_interval = log_interval
         self.last_log = -float('inf')
 
@@ -103,17 +98,13 @@ class ActorCritic(nn.Module):
         self.grad_clip = grad_clip
         self.normalize_adv = normalize_adv
         self.tune_entropy = tune_entropy
-        self.entropy_target = entropy_target
         self.log_alpha = torch.log(torch.tensor(entropy_weight)).to(self.device)
-        if self.tune_entropy:
-            self.log_alpha.requires_grad_(True)
-            self._optimizer_alpha = torch.optim.AdamW([self.log_alpha], lr=lr_alpha)
         
-        self.lr_schedule = lr_schedule
+        self.update_actor_lr = update_actor_lr
         self.tune_actor_lr = tune_actor_lr
         self.target_update = target_update
         self.max_lr = lr_actor
-        if self.lr_schedule == "target":
+        if self.update_actor_lr:
             self.log_actor_lr = torch.log(torch.tensor(lr_actor)).to(self.device)
             self.log_actor_lr.requires_grad_(True)
             self._optimizer_actor_lr = torch.optim.AdamW([self.log_actor_lr], lr=tune_actor_lr)
@@ -152,14 +143,7 @@ class ActorCritic(nn.Module):
         y = self.critic.forward(features)
         return y
 
-    def update_alpha(self, policy_entropy):
-        alpha_loss = -(self.log_alpha * (self.entropy_target - policy_entropy).detach()).mean()
-        self._optimizer_alpha.zero_grad()
-        alpha_loss.backward()
-        self._optimizer_alpha.step()
-        self.log_alpha.data = torch.clamp(self.log_alpha.data, min=-20, max=4)
-
-    def update_actor_lr(self, update_size):
+    def update_lr(self, update_size):
         loss = -(self.log_actor_lr * (self.target_update - update_size)).mean()
         self._optimizer_actor_lr.zero_grad()
         loss.backward()
@@ -279,9 +263,6 @@ class ActorCritic(nn.Module):
         # Combined loss
         loss_combined = loss_actor + loss_critic
 
-        if self.tune_entropy:
-            self.update_alpha(policy_entropy)
-
         with torch.no_grad():
             metrics.update({
                 "loss_critic": loss_critic.detach().item(),
@@ -348,17 +329,12 @@ class ActorCritic(nn.Module):
                 metrics["update_linesearch_steps"] = linesearch_steps
                 self._optimizer_actor.param_groups[0]['lr'] = old_lr 
 
-            if self.lr_schedule == "target":
-                self.update_actor_lr(initial_update_size)
-            elif self.lr_schedule == "linear":
-                self._optimizer_actor.param_groups[0]['lr'] = self.max_lr * (1 - env_step / self.lr_decay_steps)
+            if self.update_actor_lr:
+                self.update_lr(initial_update_size)
             metrics["lr_actor"] = self._optimizer_actor.param_groups[0]['lr']
 
             # if fixed std dev decay the std dev
             if self.fixed_std:
                 self.update_std(env_step)
         return metrics
-
-    def update_std(self, env_step):
-        self.current_std = max(self.min_std, self.init_std * (1 - env_step / self.decay_std_steps))
 
