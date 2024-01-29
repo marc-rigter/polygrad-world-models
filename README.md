@@ -32,7 +32,7 @@ python3 scripts/train_diffusion_wm.py --config config.world_model_only.polygrad_
 ```
 Config files for the MLP and transformer denoising network, as well as different trajectory lengths are provided in the config folder.
 
-## World Model Baselines
+## Running Baselines
 
 In this repo, we also provide implementations of the autoregressive diffusion and transformer world model baselines in the paper. Ensure that you have the datasets in polygrad-world-models/datasets. Then, to train the autoregressive diffusion world model baseline:
 ```
