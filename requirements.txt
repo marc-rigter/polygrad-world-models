@@ -11,3 +11,6 @@ pandas
 wandb
 cython<3
 dill
+click
+pyyaml
+six
