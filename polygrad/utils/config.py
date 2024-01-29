@@ -186,7 +186,7 @@ def create_configs(args, env):
         ema=args.ema,
         ac_use_normed_inputs=args.ac_use_normed_inputs,
         target_update=args.target_update,
-        tune_actor_lr=args.tune_actor_lr,
+        actorlr_lr=args.actorlr_lr,
         update_actor_lr=args.update_actor_lr,
         linesearch=args.linesearch,
         linesearch_tolerance=args.linesearch_tolerance,

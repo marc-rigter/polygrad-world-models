@@ -42,7 +42,7 @@ class ActorCritic(nn.Module):
                  learned_std=False,
                  ac_use_normed_inputs=True,
                  target_update=0.02,
-                 tune_actor_lr=3e-4,
+                 actorlr_lr=3e-4,
                  update_actor_lr=True,
                  log_interval=20000,
                  linesearch=False,
@@ -99,13 +99,13 @@ class ActorCritic(nn.Module):
         self.log_alpha = torch.log(torch.tensor(entropy_weight)).to(self.device)
         
         self.update_actor_lr = update_actor_lr
-        self.tune_actor_lr = tune_actor_lr
+        self.actorlr_lr = actorlr_lr
         self.target_update = target_update
         self.max_lr = lr_actor
         if self.update_actor_lr:
             self.log_actor_lr = torch.log(torch.tensor(lr_actor)).to(self.device)
             self.log_actor_lr.requires_grad_(True)
-            self._optimizer_actor_lr = torch.optim.AdamW([self.log_actor_lr], lr=tune_actor_lr)
+            self._optimizer_actor_lr = torch.optim.AdamW([self.log_actor_lr], lr=actorlr_lr)
 
     def forward_actor(self, features: Tensor, normed_input=True) -> D.Distribution:
         """Takes as input either normalized or unnnormalized features. Outputs

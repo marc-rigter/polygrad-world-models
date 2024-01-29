@@ -111,7 +111,7 @@ base = {
     'ac_use_normed_inputs': False,
     'target_update': 0.01,
     'update_actor_lr': True,
-    'tune_actor_lr': 3e-4,
+    'actorlr_lr': 3e-4,
     'update_states': False,
     'states_for_guidance': 'recon', # ['recon', 'posterior_mean']
     'rollout_steps': None,
