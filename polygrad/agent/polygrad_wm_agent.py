@@ -39,6 +39,7 @@ class PolygradWMAgent(nn.Module):
                  clip_state_change=1.0,
                  ):
         super().__init__()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.diffusion_model = diffusion_model
         self.ac = actor_critic
         self.env = env
@@ -47,9 +48,7 @@ class PolygradWMAgent(nn.Module):
         self.renderer = renderer
         self.log_interval = log_interval
         self.guidance_type = guidance_type
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.action_guidance_noise_scale = action_guidance_noise_scale
-        assert self.guidance_type in ['grad', 'sample', 'none']
         self.log_guidance = torch.log(torch.tensor(guidance_scale)).to(self.device)
         self.tune_guidance = tune_guidance
         self.update_states = update_states
@@ -61,6 +60,8 @@ class PolygradWMAgent(nn.Module):
             self._guidance_optimizer = torch.optim.SGD([self.log_guidance], lr=guidance_lr)
         self.last_log_step = -1
         self.rollout_steps = rollout_steps
+
+        assert self.guidance_type in ['grad', 'sample', 'none']
 
     def imagine(self, conditions, return_sequence=False):
         self.diffusion_model.eval()
@@ -122,7 +123,6 @@ class PolygradWMAgent(nn.Module):
             device, 
             step, 
             max_log=50,
-            diff_seq=None,
         ):
         metrics = dict()
         obs = self.unnormalize(obs_norm, "observations")
@@ -141,29 +141,6 @@ class PolygradWMAgent(nn.Module):
         metrics["data/imag_rew_mean"] = np.mean(rew)
         metrics["data/imag_rew_std"] = np.std(rew)
             
-        if self.renderer is not None:
-            savepath = join(self.log_path, f'step-{step}-imagined-policy-traj.png')
-            self.renderer.composite(obs[:max_log], act[:max_log], rew[:max_log], savepath=savepath)
-
-            # get trajectories of real data
-            real_obs, real_act = rollout_policy(
-            self.env,
-            self.ac.forward_actor,
-            horizon=self.diffusion_model.horizon,
-            init_states=obs[:max_log, 0, :],
-            dataset=self.dataset,
-            device=device)
-            savepath = join(self.log_path, f'step-{step}-real-policy-traj.png')
-            self.renderer.composite(real_obs[:max_log], real_act[:max_log], rew[:max_log], savepath=savepath)
-            self.renderer.render_policy(self.ac.forward_actor, savepath=join(self.log_path, f'step-{step}-policy-actions.png'))
-
-            if diff_seq is not None:
-                for i in list(range(0, len(diff_seq), 10)) + list(range(len(diff_seq)-9, len(diff_seq))):
-                    savepath = join(self.log_path, f'step-{step}-imagined-policy-diff-{i}.png')
-                    obs_norm = diff_seq[i][:max_log, :, :self.dataset.observation_dim]
-                    obs = self.unnormalize(obs_norm, "observations")
-                    self.renderer.composite(obs, np.zeros_like(act[:max_log]), np.zeros_like(rew[:max_log]), savepath=savepath)
-
         # compute imagined to real dynamics
         error_metrics = compute_traj_errors(self.env, obs[:max_log], act[:max_log], rew[:max_log], sim_states=sim_states[:max_log])
         metrics.update(error_metrics)
@@ -171,21 +148,15 @@ class PolygradWMAgent(nn.Module):
 
     def training_step(self, batch, step, log_only=False, max_log=50):
         if (step >= self.last_log_step + self.log_interval):
-            if hasattr(self.env, "init_cond_for_viz"):
-                conditions = self.env.init_cond_for_viz()
-                conditions = self.dataset.normalizer.normalize(conditions, 'observations')
-                conditions = {0: torch.tensor(conditions).to(self.device)}
-            else:
-                conditions = batch.conditions
-            obs_norm, act_norm, rew_norm, term, metrics, diffusion_sequence = self.imagine(conditions, return_sequence=True)
+            conditions = batch.conditions
+            obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(conditions, return_sequence=True)
             metrics.update(self.get_metrics(obs_norm.cpu().detach().numpy(),
                                             act_norm.cpu().detach().numpy(),
                                             rew_norm.cpu().detach().numpy(),
                                             batch.sim_states,
                                             self.device, 
                                             step,
-                                            max_log=max_log,
-                                            diff_seq=diffusion_sequence))
+                                            max_log=max_log))
             self.last_log_step = step
         else:
             obs_norm, act_norm, rew_norm, term, metrics, _ = self.imagine(batch.conditions)
