@@ -29,16 +29,11 @@ class ActorCritic(nn.Module):
                  ema=0.995,
                  lambda_gae=0.8,
                  entropy_weight=1e-3,
-                 target_interval=100,
                  lr_actor=1e-4,
                  lr_critic=3e-4,
-                 lr_alpha=1e-2,
-                 actor_grad='reinforce',
                  actor_dist='normal_tanh',
                  normalize_adv=False,
                  grad_clip=None,
-                 clip_logprob=True,
-                 min_logprob=-10.0,
                  learned_std=False,
                  ac_use_normed_inputs=True,
                  target_update=0.02,
@@ -56,13 +51,9 @@ class ActorCritic(nn.Module):
         self.action_dim = out_actions
         self.gamma = gamma
         self.lambda_ = lambda_gae
-        self.target_interval = target_interval
-        self.actor_grad = actor_grad
         self.actor_dist = actor_dist
         self.min_std = min_std
-        self.clip_logprob = clip_logprob
         self.normalizer = normalizer
-        self.min_logprob = min_logprob * self.action_dim
         self.learned_std = learned_std
         self.fixed_std = fixed_std
         self.init_std = init_std
@@ -231,19 +222,13 @@ class ActorCritic(nn.Module):
             metrics.update(act_metrics)
             self.last_log = env_step
 
-        if self.clip_logprob:
-            to_keep = torch.as_tensor(standard_logprob.gt(self.min_logprob), dtype=torch.float32)
-            metrics["imagine_clip_frac"] = 1 - to_keep.mean().item()
-        else:
-            to_keep = torch.ones_like(standard_logprob)
-
         # Actor loss
         if self.normalize_adv:
-            advantage_gae = (advantage_gae - advantage_gae[to_keep.type(torch.bool)].mean()) / (advantage_gae[to_keep.type(torch.bool)].std() + 1e-8)
+            advantage_gae = (advantage_gae - advantage_gae.mean()) / (advantage_gae.std() + 1e-8)
 
-        loss_policy = - action_logprob * advantage_gae.detach() * to_keep
-        standard_logprob_avg = standard_logprob[to_keep.to(torch.bool)].mean()
-        standard_logprob_std = standard_logprob[to_keep.to(torch.bool)].std()
+        loss_policy = - action_logprob * advantage_gae.detach() 
+        standard_logprob_avg = standard_logprob.mean()
+        standard_logprob_std = standard_logprob.std()
 
         policy_entropy = policy_distr.entropy()
         if not self.fixed_std:
@@ -256,7 +241,7 @@ class ActorCritic(nn.Module):
         value = self.critic.forward(states)
         value = value[:, :-1]
         loss_critic = 0.5 * torch.square(value_target.detach() - value)
-        loss_critic = (loss_critic * to_keep * reality_weight).mean()
+        loss_critic = (loss_critic * reality_weight).mean()
 
         # Combined loss
         loss_combined = loss_actor + loss_critic
