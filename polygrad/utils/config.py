@@ -122,17 +122,11 @@ def create_configs(args, env):
         horizon=args.horizon,
         observation_dim=observation_dim,
         action_dim=action_dim,
-        temporal_loss_weight=args.temporal_loss_weight,
         n_timesteps=args.n_diffusion_steps,
         loss_type=args.loss_type,
         clip_denoised=args.clip_denoised,
         predict_epsilon=args.predict_epsilon,
-        action_weight=args.action_weight,
-        loss_weights=args.loss_weights,
-        loss_discount=args.loss_discount,
         noise_sched_tau=args.noise_sched_tau,
-        mask_obs=args.mask_obs,
-        max_prediction_weight=args.max_prediction_weight,
         action_condition_noise_scale=args.action_condition_noise_scale,
     )
 

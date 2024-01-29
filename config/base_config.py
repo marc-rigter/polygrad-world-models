@@ -36,14 +36,10 @@ base = {
     'diffusion': 'models.GaussianDiffusion',
     'horizon': 10,
     'n_diffusion_steps': 128,
-    'action_weight': 1,
-    'loss_weights': None,
-    'loss_discount': 1,
     'predict_epsilon': False,
     'dim_mults': (1, 2, 4, 8),
     'attention': False,
     'renderer': None,
-    'mask_obs': False,
     'dropout': 0.0,
     'embed_dim': 128,
     'hidden_dim': 1024,
@@ -67,7 +63,6 @@ base = {
     ## diffusion training
     'train_interval': 10,
     'train_diffusion_ratio': 1.0,
-    'temporal_loss_weight': 1.0,
     'loss_type': 'l2',
     'batch_size': 256,
     'learning_rate': 3e-4,
@@ -80,7 +75,6 @@ base = {
     'pretrain_diffusion': 1000,
     'noise_sched_tau': 1.0,
     'scale_obs': 1.0,
-    'max_prediction_weight': 1.0,
     'clip_std': 3.0,
 
     ## agent

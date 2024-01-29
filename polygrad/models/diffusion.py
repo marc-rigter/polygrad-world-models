@@ -30,9 +30,7 @@ def make_timesteps(batch_size, i, device):
 class GaussianDiffusion(nn.Module):
     def __init__(self, model, horizon, observation_dim, action_dim, n_timesteps=1000,
         loss_type='l1', clip_denoised=False, predict_epsilon=True,
-        action_weight=1.0, loss_discount=1.0, loss_weights=None,
-        noise_sched_tau=1.0, mask_obs=False, max_prediction_weight=1.0,
-        temporal_loss_weight=1.0, action_condition_noise_scale=1.0,
+        noise_sched_tau=1.0, action_condition_noise_scale=1.0,
     ):
         super().__init__()
         self.horizon = horizon
@@ -76,39 +74,8 @@ class GaussianDiffusion(nn.Module):
         self.register_buffer('posterior_mean_coef1', coef1)
         self.register_buffer('posterior_mean_coef2', coef2)
 
-        ## get loss coefficients and initialize objective
-        loss_weights = torch.linspace(temporal_loss_weight, 1 / temporal_loss_weight, horizon)
-        loss_weights = loss_weights[None, :, None]
-        self.loss_fn = Losses[loss_type](loss_weights)
-
-    def get_loss_weights(self, action_weight, discount, weights_dict):
-        '''
-            sets loss coefficients for trajectory
-
-            action_weight   : float
-                coefficient on first action loss
-            discount   : float
-                multiplies t^th timestep of trajectory loss by discount**t
-            weights_dict    : dict
-                { i: c } multiplies dimension i of observation loss by c
-        '''
-        self.action_weight = action_weight
-
-        dim_weights = torch.ones(self.transition_dim, dtype=torch.float32)
-
-        ## set loss coefficients for dimensions of observation
-        if weights_dict is None: weights_dict = {}
-        for ind, w in weights_dict.items():
-            dim_weights[ind] *= w
-
-        ## decay loss with trajectory timestep: discount**t
-        discounts = discount ** torch.arange(self.horizon, dtype=torch.float)
-        discounts = discounts / discounts.mean()
-        loss_weights = torch.einsum('h,t->ht', discounts, dim_weights)
-
-        ## manually set a0 weight
-        loss_weights[0, (-1 - self.action_dim):-1] = action_weight
-        return loss_weights
+        ## initialize objective
+        self.loss_fn = Losses[loss_type]()
 
     #------------------------------------------ sampling ------------------------------------------#
 
