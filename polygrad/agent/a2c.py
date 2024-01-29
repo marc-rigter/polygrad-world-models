@@ -29,7 +29,6 @@ class ActorCritic(nn.Module):
                  ema=0.995,
                  lambda_gae=0.8,
                  entropy_weight=1e-3,
-                 tune_entropy=True,
                  target_interval=100,
                  lr_actor=1e-4,
                  lr_critic=3e-4,
@@ -97,7 +96,6 @@ class ActorCritic(nn.Module):
         self._optimizer_critic = torch.optim.AdamW(self.critic.parameters(), lr=lr_critic)
         self.grad_clip = grad_clip
         self.normalize_adv = normalize_adv
-        self.tune_entropy = tune_entropy
         self.log_alpha = torch.log(torch.tensor(entropy_weight)).to(self.device)
         
         self.update_actor_lr = update_actor_lr

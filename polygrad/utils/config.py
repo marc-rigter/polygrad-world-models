@@ -175,7 +175,6 @@ def create_configs(args, env):
         min_std=args.min_std,
         lambda_gae=args.lambda_gae,
         entropy_weight=args.entropy_weight,
-        tune_entropy=args.tune_entropy,
         lr_actor=args.lr_actor,
         lr_critic=args.lr_critic,
         grad_clip=args.ac_grad_clip,
