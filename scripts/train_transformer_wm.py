@@ -39,7 +39,7 @@ utils.set_all_seeds(args.seed)
 # load all config params
 configs = utils.create_configs(args, eval_env)
 model = configs["model_config"]()
-model.to("cuda:0")
+model.to(device)
 dataset = configs["dataset_config"](random_episodes)
 ac = configs["ac_config"](normalizer=dataset.normalizer)
 world_model = TransformerWM(
@@ -51,7 +51,7 @@ world_model = TransformerWM(
 # load dataset and a2c from checkpoint
 assert args.load_path is not None
 ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
-ac.load_state_dict(torch.load(ac_path), map_location=device)
+ac.load_state_dict(torch.load(ac_path, map_location=device))
 reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.npy"), dataset)
 wandb.init(entity="a2i",  project=args.project, group=args.group, config=args)
 

@@ -15,13 +15,14 @@ class TransformerWM:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-4)
         self.context_length = context_length
         self.rollout_length = rollout_length
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def train(self, batch):
         metrics = dict()
 
-        input_obs = batch.trajectories[:, :-1].to("cuda:0")
-        input_act = batch.actions[:, :-1].to("cuda:0")
-        targets = batch.trajectories[:, 1:].to("cuda:0")
+        input_obs = batch.trajectories[:, :-1].to(self.device)
+        input_act = batch.actions[:, :-1].to(self.device)
+        targets = batch.trajectories[:, 1:].to(self.device)
 
         # forward pass
         predictions = self.model(input_obs, input_act)
@@ -35,12 +36,12 @@ class TransformerWM:
         return metrics
     
     def imagine(self, batch, policy):
-        imag_states = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.trajectories.shape[2] - 2).to("cuda:0")
-        imag_act = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.actions.shape[2]).to("cuda:0")
-        imag_rewards = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to("cuda:0")
-        imag_terminals = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to("cuda:0")
+        imag_states = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.trajectories.shape[2] - 2).to(self.device)
+        imag_act = torch.zeros(batch.trajectories.shape[0], self.rollout_length, batch.actions.shape[2]).to(self.device)
+        imag_rewards = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to(self.device)
+        imag_terminals = torch.zeros(batch.trajectories.shape[0], self.rollout_length).to(self.device)
 
-        obs_context = batch.trajectories[:, 0:1].to("cuda:0")
+        obs_context = batch.trajectories[:, 0:1].to(self.device)
         metrics = dict()
         start = time.time()
         for i in range(self.rollout_length):

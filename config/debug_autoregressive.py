@@ -1,4 +1,4 @@
-from .debug_polygrad import base, args_to_watch, logbase
+from .debug import base, args_to_watch, logbase
 
 params = {
         'diffusion_method': 'autoregressive',
