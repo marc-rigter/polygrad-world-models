@@ -101,7 +101,6 @@ base = {
     'lambda_gae': 0.9,
     'eval_interval': 10000,
     'ema': 0.995,
-    'log_video': False,
     'ac_use_normed_inputs': False,
     'target_update': 0.01,
     'update_actor_lr': True,

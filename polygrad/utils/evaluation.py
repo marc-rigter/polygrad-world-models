@@ -17,7 +17,7 @@ def get_standardized_stats(policy_distr, act):
     act_means = torch.mean(normed_act, dim=[0, 1])
     return standard_logprob, act_stds, act_means
 
-def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=False, renderer=None, savepath=None, log_video=False):
+def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=False, renderer=None, savepath=None):
     """
     """
     ep_lens = []
@@ -25,7 +25,6 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
     returns = []
     states = []
     actions = []
-    images = []
 
     for i in range(n_episodes):
         done = False
@@ -35,10 +34,6 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
         ep_rewards = []
         ep_states = []
         ep_actions = []
-        ep_images = []
-        
-        if log_video:
-            ep_images.append(env.render(width=128, height=128))
 
         while not done:
             policy_dist = policy(torch.from_numpy(state).float().to(device), normed_input=False)
@@ -53,8 +48,6 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
             ep_states.append(state.copy())
             ep_actions.append(act.copy())
             ep_rewards.append(rew.copy())
-            if log_video:
-                ep_images.append(env.render(width=128, height=128))
             t += 1
             state = next_state
         
@@ -62,7 +55,6 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
         rewards.append(np.array(ep_rewards))
         states.append(np.array(ep_states))
         actions.append(np.array(ep_actions))
-        images.append(np.array(ep_images))
         ep_lens.append(t)
 
     avg_return = np.mean(np.array(returns))
@@ -79,8 +71,6 @@ def evaluate_policy(policy, env, device, step, dataset, n_episodes=10, use_mean=
     metrics["avg_ep_len"] = avg_ep_len
     metrics["min_ep_len"] = min_ep_len
     metrics["max_ep_len"] = max_ep_len
-    if log_video:
-        metrics['video'] = np.array(images)
 
     if savepath is not None:
         savepath = join(savepath, f'step-{step}-real-policy-traj.png')

@@ -1,13 +1,10 @@
 import polygrad.utils as utils
-import os
 import torch
 import wandb
-import importlib
 import numpy as np
 from polygrad.utils.evaluation import evaluate_policy
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
-from os.path import join
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -45,7 +42,6 @@ agent = configs["agent_config"](
     env=eval_env,
     renderer=renderer
 )
-
 
 utils.report_parameters(model)
 wandb.init(project=args.project, group=args.group, config=args, name=args.run_name)
@@ -145,15 +141,7 @@ while step < args.n_environment_steps:
             use_mean=True,
             n_episodes=20,
             renderer=renderer,
-            log_video=args.log_video
         )
-
-        if 'video' in eval_metrics:
-            vids = eval_metrics.pop('video')
-            vids = vids[:3].transpose((0, 1, 4, 2, 3)) # Only log the first three videos
-            log_dict = {'video': [wandb.Video(vid, fps=16, format="mp4") for vid in vids]}
-            wandb.log(log_dict, step=step)
-        [metrics.update({f"eval/{key}": eval_metrics[key]}) for key in eval_metrics.keys()]
 
     wandb.log(metrics, step=step)
     step += 1

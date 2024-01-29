@@ -5,9 +5,9 @@ import wandb
 import importlib
 import dill as pickle
 import numpy as np
-from polygrad.utils.evaluation import evaluate_policy
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
+from polygrad.utils.serialization import reload_dataset
 from os.path import join
 
 
@@ -54,33 +54,10 @@ agent = configs["agent_config"](
     renderer=renderer
 )
 
-# load dataset and a2c from checkpoint. ensure that diffusion trainer and ac have
-# correct dataset and normalizer
+# load dataset and a2c from checkpoint
 assert args.load_path is not None
 agent.load(args.load_path, args.load_step, load_a2c=True, load_dataset=False, load_diffusion=False)
-
-reload_dataset_path = join(args.load_path, f"step-{args.load_step}-dataset.pkl")
-with open(reload_dataset_path, 'rb') as f:
-    reload_dataset = pickle.load(f)
-    data_buffer = reload_dataset.data_buffer
-
-# put the loaded data into the dataset object
-dataset.reset_data_buffer()
-for i in range(data_buffer.n_episodes):
-    path_length = data_buffer._dict['path_lengths'][i]
-    episode = {
-        "observations": data_buffer._dict['observations'][i][:path_length],
-        "actions": data_buffer._dict['actions'][i][:path_length],
-        "next_observations": data_buffer._dict['next_observations'][i][:path_length],
-        "rewards": data_buffer._dict['rewards'][i][:path_length],
-        "terminals": data_buffer._dict['terminals'][i][:path_length],
-        "sim_states": data_buffer._dict['sim_states'][i][:path_length],
-    }
-    episode["timeouts"] = np.array([False] * len(episode["rewards"]))
-    dataset.add_episode(episode)
-dataset.update_normalizers()
-print(f"Loaded dataset containing {dataset.data_buffer.n_episodes} episodes.")
-
+reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.pkl"), dataset)
 utils.report_parameters(model)
 group = "online_rl"
 wandb.init(entity="a2i", project=args.project, group=args.group, config=args)

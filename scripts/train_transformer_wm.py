@@ -5,9 +5,9 @@ import wandb
 import importlib
 import dill as pickle
 import numpy as np
-from polygrad.utils.evaluation import evaluate_policy
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
+from polygrad.utils.serialization import reload_dataset
 from polygrad.agent.transformer_wm import TransformerWM
 from os.path import join
 from polygrad.utils.errors import compute_traj_errors
@@ -33,8 +33,6 @@ train_diffusion_steps = args.n_train_steps
 expl_env = create_env(args.env_name, args.suite)
 eval_env = create_env(args.env_name, args.suite)
 random_episodes = utils.rl.random_exploration(100, expl_env)
-
-print("Seed", args.seed)
 utils.set_all_seeds(args.seed)
 
 # load all config params
@@ -54,31 +52,7 @@ ac.load_state_dict(torch.load(ac_path))
 
 # load dataset from checkpoint.
 assert args.load_path is not None
-
-reload_dataset_path = join(args.load_path, f"step-{args.load_step}-dataset.pkl")
-with open(reload_dataset_path, 'rb') as f:
-    reload_dataset = pickle.load(f)
-    data_buffer = reload_dataset.data_buffer
-
-# put the loaded data into the dataset object
-dataset.reset_data_buffer()
-for i in range(data_buffer.n_episodes):
-    path_length = data_buffer._dict['path_lengths'][i]
-    episode = {
-        "observations": data_buffer._dict['observations'][i][:path_length],
-        "actions": data_buffer._dict['actions'][i][:path_length],
-        "next_observations": data_buffer._dict['next_observations'][i][:path_length],
-        "rewards": data_buffer._dict['rewards'][i][:path_length],
-        "terminals": data_buffer._dict['terminals'][i][:path_length],
-        "sim_states": data_buffer._dict['sim_states'][i][:path_length],
-    }
-    episode["timeouts"] = np.array([False] * len(episode["rewards"]))
-    dataset.add_episode(episode)
-dataset.update_normalizers()
-print(f"Loaded dataset containing {dataset.data_buffer.n_episodes} episodes.")
-
-
-group = "online_rl"
+reload_dataset(join(args.load_path, f"step-{args.load_step}-dataset.pkl"), dataset)
 wandb.init(entity="a2i",  project=args.project, group=args.group, config=args)
 
 #-----------------------------------------------------------------------------#
