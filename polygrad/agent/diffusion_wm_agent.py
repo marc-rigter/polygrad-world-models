@@ -12,7 +12,6 @@ from os.path import join
 
 from .functions import *
 from .common import *
-from .utils import *
 from polygrad.utils.errors import compute_traj_errors
 from pathlib import Path
 
