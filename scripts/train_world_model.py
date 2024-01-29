@@ -8,9 +8,7 @@ import numpy as np
 from polygrad.utils.evaluation import evaluate_policy
 from polygrad.utils.envs import create_env
 from polygrad.utils.timer import Timer
-from polygrad.models.transformer_world_model import TransformerWM
 from os.path import join
-from polygrad.utils.errors import compute_traj_errors
 
 
 def update_dataset_indices(dataset, horizon):
@@ -39,21 +37,27 @@ utils.set_all_seeds(args.seed)
 
 # load all config params
 configs = utils.create_configs(args, eval_env)
+if configs["render_config"] is not None:
+    renderer = configs["render_config"]()
+else:
+    renderer = None
 model = configs["model_config"]()
-model.to("cuda:0")
+diffusion = configs["diffusion_config"](model)
 dataset = configs["dataset_config"](random_episodes)
+diffusion_trainer = configs["trainer_config"](diffusion, dataset, eval_env, renderer)
 ac = configs["ac_config"](normalizer=dataset.normalizer)
-world_model = TransformerWM(
-    model,
-    context_length = args.horizon - 1,
-    rollout_length = args.rollout_steps
+agent = configs["agent_config"](
+    diffusion_model=diffusion_trainer.ema_model,
+    actor_critic=ac,
+    dataset=dataset,
+    env=eval_env,
+    renderer=renderer
 )
 
-ac_path = join(args.load_path, f"step-{args.load_step}-ac.pt")
-ac.load_state_dict(torch.load(ac_path))
-
-# load dataset from checkpoint.
+# load dataset and a2c from checkpoint. ensure that diffusion trainer and ac have
+# correct dataset and normalizer
 assert args.load_path is not None
+agent.load(args.load_path, args.load_step, load_a2c=True, load_dataset=False, load_diffusion=False)
 
 reload_dataset_path = join(args.load_path, f"step-{args.load_step}-dataset.pkl")
 with open(reload_dataset_path, 'rb') as f:
@@ -76,13 +80,16 @@ for i in range(data_buffer.n_episodes):
     dataset.add_episode(episode)
 dataset.update_normalizers()
 print(f"Loaded dataset containing {dataset.data_buffer.n_episodes} episodes.")
-wandb.init(project=args.project, group=args.group, config=args)
+
+utils.report_parameters(model)
+group = "online_rl"
+wandb.init(entity="a2i", project=args.project, group=args.group, config=args)
 
 #-----------------------------------------------------------------------------#
 #--------------------------- prepare to train --------------------------------#
 #-----------------------------------------------------------------------------#
 
-dataloader = utils.training.cycle(torch.utils.data.DataLoader(
+agent_dataloader = utils.training.cycle(torch.utils.data.DataLoader(
     dataset, batch_size=args.agent_batch_size, num_workers=2, shuffle=True, pin_memory=True
 ))
 
@@ -90,34 +97,17 @@ dataloader = utils.training.cycle(torch.utils.data.DataLoader(
 
 step = 0
 timer = Timer()
-max_log = 256
 while step < train_diffusion_steps:
     metrics = dict()
 
-    batch = next(dataloader)
-    metrics.update(world_model.train(batch))
+    if step % int(1 / args.train_agent_ratio) == 0:
+        batch = next(agent_dataloader)
+        agent_metrics = agent.training_step(batch, step, device="cuda:0", log_only=True, max_log=500)
+        [metrics.update({f"agent/{key}": agent_metrics[key]}) for key in agent_metrics.keys()]
 
-    if step % 2000 == 0:
-        imag_states, imag_act, imag_rewards, imag_terminals, imag_metrics = world_model.imagine(batch, ac.forward_actor)
-        
-        obs = dataset.normalizer.unnormalize(imag_states.detach().cpu().numpy(), "observations")
-        act = dataset.normalizer.unnormalize(imag_act.detach().cpu().numpy(), "actions")
-        rew = dataset.normalizer.unnormalize(imag_rewards.detach().cpu().numpy(), "rewards")
-        error_metrics = compute_traj_errors(
-            eval_env,
-            obs[:max_log],
-            act[:max_log], 
-            rew[:max_log],
-            sim_states=batch.sim_states[:max_log]
-        )
-        metrics.update(imag_metrics)
-        metrics.update(error_metrics)
-        wandb.log(metrics, step=step)
-        print("Error Metrics: ")
-        print(error_metrics)
-        print("\n")
+        diffusion_updates = int(args.train_diffusion_ratio / args.train_agent_ratio)
+        diffusion_metrics = diffusion_trainer.train(diffusion_updates, step)
+        [metrics.update({f"diffusion/{key}": diffusion_metrics[key]}) for key in diffusion_metrics.keys()]
 
-    if step % 100 == 0:
-        print("Train step: ", step)
-        wandb.log(metrics, step=step)
+    wandb.log(metrics, step=step)
     step += 1
