@@ -65,8 +65,14 @@ class DiffusionWMAgent(nn.Module):
 
         assert self.guidance_type in ['grad', 'sample', 'none']
         assert self.diffusion_method in ['polygrad', 'autoregressive']
+        if self.diffusion_method == 'autoregressive':
+            assert self.diffusion_model.horizon == 2
+            assert self.rollout_steps is not None
 
     def imagine_polygrad(self, conditions):
+        """
+        Generate trajectories using policy-guided trajectory diffusion (polygrad)
+        """
         trajs, imag_actions, seq, sampling_metrics = self.diffusion_model(
             conditions,
             policy=self.ac.forward_actor,
@@ -86,6 +92,38 @@ class DiffusionWMAgent(nn.Module):
         imag_terminals = trajs[:, :, -1]
         imag_terminals = self.unnormalize(imag_terminals, "terminals")
         return imag_obs, imag_actions, imag_rewards, imag_terminals, sampling_metrics
+    
+    def imagine_autoregressive(self, conditions):
+        """
+        Generate rollouts by sequentially querying diffusion model that makes
+        one-step predictions
+        """
+        imag_states = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.observation_dim).to(self.device)
+        imag_act = torch.zeros(conditions[0].shape[0], self.rollout_steps, self.dataset.action_dim).to(self.device)
+        imag_rewards = torch.zeros(conditions[0].shape[0], self.rollout_steps).to(self.device)
+        imag_terminals = torch.zeros(conditions[0].shape[0], self.rollout_steps).to(self.device)
+
+        for i in range(self.rollout_steps):
+            current_state_normed = conditions[0]
+            policy_dist = self.ac.forward_actor(current_state_normed.to(self.device), normed_input=True)
+            actions = policy_dist.sample().unsqueeze(1)
+            actions = self.normalize(actions, "actions")
+            actions = torch.cat([actions, torch.zeros_like(actions)], dim=1) 
+            imag_states[:, i, :] = current_state_normed
+            imag_act[:, i, :] = actions[:, 0, :]
+            trajs, _, _, _ = self.diffusion_model(
+                conditions,
+                act=actions,
+                policy=None,
+                verbose=False,
+            )
+            imag_rewards[:, i] = trajs[:, 0, -2]
+            imag_terminals[:, i] = trajs[:, 0, -1]
+
+            # update next state
+            conditions[0] = trajs[:, -1, :self.dataset.observation_dim]
+        imag_terminals = self.unnormalize(imag_terminals, "terminals")
+        return imag_states, imag_act, imag_rewards, imag_terminals, {}
 
     def imagine(self, conditions):
         self.diffusion_model.eval()
@@ -93,6 +131,8 @@ class DiffusionWMAgent(nn.Module):
         start = time.time()
         if self.diffusion_method == "polygrad":
             imag_obs, imag_actions, imag_rewards, imag_terminals, sampling_metrics = self.imagine_polygrad(conditions)
+        elif self.diffusion_method == "autoregressive":
+            imag_obs, imag_actions, imag_rewards, imag_terminals, sampling_metrics = self.imagine_autoregressive(conditions)
         else:
             raise NotImplementedError
         metrics[f"imagine_time/step_{self.diffusion_model.horizon}"] = time.time() - start
