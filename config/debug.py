@@ -9,8 +9,6 @@ params = {
         'eval_interval': 1000,
         'batch_size': 256,
         'agent_batch_size': 256,
-        'n_diffusion_steps': 100,
-        'linesearch':True,
         'hidden_dim': 128,
 }
 base.update(params)
