@@ -58,3 +58,18 @@ For the MLP ensemble baseline we used the code from [mbpo_pytorch](https://githu
 
 ## Acknowledgements
 Our implementation utilises code from [Diffuser](https://github.com/jannerm/diffuser), [nanoGPT](https://github.com/karpathy/nanoGPT), and [SynthER](https://github.com/conglu1997/SynthER).
+
+## Issues
+- fatal error: GL/glew.h: No such file or directory
+  > https://github.com/openai/mujoco-py/issues/627
+  > 
+  > this issue could be solved with conda
+  >
+  > ```shell
+  > conda install -c conda-forge glew
+  > conda install -c conda-forge mesalib
+  > conda install -c menpo glfw3
+  > ```
+  > Then add your conda environment include to CPATH (put this in your .bashrc to make it permanent):
+  > export CPATH=$CONDA_PREFIX/include
+  > Finally, install patchelf with `pip install patchelf`
