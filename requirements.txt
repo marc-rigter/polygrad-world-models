@@ -15,3 +15,5 @@ click
 pyyaml
 six
 pytz
+matplotlib
+dm-control
