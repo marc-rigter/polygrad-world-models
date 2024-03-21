@@ -8,6 +8,8 @@ Official code to reproduce the experiments for the paper [World Models via Polic
 1. Install [MuJoCo 2.1.0](https://github.com/deepmind/mujoco/releases) to `~/.mujoco/mujoco210`.
 2. Install requirements and package.
 ```
+conda create -n polygrad python=3.10
+conda activate polygrad
 cd polygrad-world-models
 pip install -r requirements.txt
 pip install -e .
