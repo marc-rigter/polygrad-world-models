@@ -53,8 +53,8 @@ For the MLP ensemble baseline we used the code from [mbpo_pytorch](https://githu
 @article{rigter2023world,
   title={World Models via Policy-Guided Trajectory Diffusion},
   author={Rigter, Marc and Yamada, Jun and Posner, Ingmar},
-  journal={arXiv preprint arXiv:2312.08533},
-  year={2023}
+  journal={Transactions on Machine Learning Research},
+  year={2024}
 }
 ```
 
