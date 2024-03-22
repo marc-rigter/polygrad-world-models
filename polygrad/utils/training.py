@@ -66,13 +66,14 @@ class Trainer(object):
         wandb_project="diffusion_world_models",
     ):
         super().__init__()
-
-        self.model = diffusion_model
+        
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.model = diffusion_model.to(self.device)
         self.ema = EMA(ema_decay)
         self.ema_model = copy.deepcopy(self.model)
         self.update_ema_every = update_ema_every
         self.env = env
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        
 
         self.step_start_ema = step_start_ema
         self.log_freq = log_freq

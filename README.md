@@ -8,6 +8,8 @@ Official code to reproduce the experiments for the paper [World Models via Polic
 1. Install [MuJoCo 2.1.0](https://github.com/deepmind/mujoco/releases) to `~/.mujoco/mujoco210`.
 2. Install requirements and package.
 ```
+conda create -n polygrad python=3.10
+conda activate polygrad
 cd polygrad-world-models
 pip install -r requirements.txt
 pip install -e .
@@ -58,3 +60,18 @@ For the MLP ensemble baseline we used the code from [mbpo_pytorch](https://githu
 
 ## Acknowledgements
 Our implementation utilises code from [Diffuser](https://github.com/jannerm/diffuser), [nanoGPT](https://github.com/karpathy/nanoGPT), and [SynthER](https://github.com/conglu1997/SynthER).
+
+## Issues
+- fatal error: GL/glew.h: No such file or directory
+  > https://github.com/openai/mujoco-py/issues/627
+  > 
+  > this issue could be solved with conda
+  >
+  > ```shell
+  > conda install -c conda-forge glew
+  > conda install -c conda-forge mesalib
+  > conda install -c menpo glfw3
+  > ```
+  > Then add your conda environment include to CPATH (put this in your .bashrc to make it permanent):
+  > export CPATH=$CONDA_PREFIX/include
+  > Finally, install patchelf with `pip install patchelf`
